@@ -46,3 +46,4 @@ for (let v of voronois) {
 }
 ```
 
+![Straight series of blobs](https://github.com/HaukeBartsch/organic/raw/main/images/straight.png)
