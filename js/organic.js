@@ -448,7 +448,8 @@ class organic {
             let p = path.getPointAtLength( (i / resolution) * curveLength);
             newPoints.push({ x: p.x, y: p.y });
         }
-        newPoints.push(this._points[this._points.length - 1]); // ensure the last point is included
+        let p = path.getPointAtLength(1.0 * curveLength);
+        newPoints.push({ x: p.x, y: p.y });
         this._points = newPoints;
         return this;
     }
@@ -518,7 +519,7 @@ class organic {
         //var polygons = d3.geom.voronoi(this._points);
 
         var isCornerRadiusAbsolute = true;
-        var cornerRadius = 23;
+        var cornerRadius = 33;
         function resampleSegments(points) {
             if (points.length == 0)
                 return points;
@@ -593,12 +594,17 @@ class organic {
             if (cell.length > 2) {
                 // this clipping only uses the convex approximation of the border, do better using polygon-clipping
                 var erg = polygonClipping.intersection([border._points.map(p => [p.x, p.y])], [cell]);
+                if (erg[0][0][0][0] == erg[0][0][erg[0][0].length-1][0] &&
+                    erg[0][0][0][1] == erg[0][0][erg[0][0].length-1][1])
+                    erg[0][0].pop(); // remove duplicate first point
 
-                let resampled = resampleSegments(erg[0][0].filter((p, i) => i < erg[0][0].length - 1));
+                // let resampled = resampleSegments(erg[0][0].filter((p, i) => i < erg[0][0].length - 1));
+                let resampled = resampleSegments(erg[0][0]);
                 let newPoly = new organic();
                 for (let p of resampled) {
                     newPoly._points.push({ x: p[0], y: p[1] });
                 }
+                //newPoly.rotateIndex(3);
                 newPoly._closed = true;
                 newPoly.setColor(newPolygons.length);
                 newPolygons.push(newPoly);
