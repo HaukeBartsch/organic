@@ -20,7 +20,7 @@ function main() {
 
     // distribute 10 points equidistantly along the centerline
     let centers = centerline.copy().selectAll()
-        .spline(10 * 2 + 1)
+        .spline(10 * 2)
         .remove(function (p, i) {
             return i % 2 == 0;
         });

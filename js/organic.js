@@ -1,3 +1,5 @@
+import SplayTree from './splay.esm.js';
+import { default as polygonClipping} from './polygon-clipping.esm.js';
 
 // Code to solve a system of linear equations using Gauss-Jordan elimination.
 // The main entry point is the solve() function.
@@ -433,6 +435,25 @@ class organic {
     }
 
     spline(resolution) {
+        const lineGenerator = d3.line()
+        .x(d => d.x)
+        .y(d => d.y)
+        .curve(d3.curveBasis);
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", lineGenerator(this._points));
+        let curveLength = path.getTotalLength();
+        let newPoints = [];
+        for (let i = 0; i < resolution; i++) {
+            let p = path.getPointAtLength( (i / resolution) * curveLength);
+            newPoints.push({ x: p.x, y: p.y });
+        }
+        newPoints.push(this._points[this._points.length - 1]); // ensure the last point is included
+        this._points = newPoints;
+        return this;
+    }
+
+    spline2(resolution) { // this only works for graphs, not if the splines curves in on itself
         let origXs = [];
         let origYs = [];
         for (let i of this._selected) {
@@ -449,12 +470,55 @@ class organic {
         return this;
     }
 
+    rotateIndex(steps = 1) {
+        if (steps == 0)
+            return this;
+        function rotateArray(arr, k, direction = 'left') {
+            const n = arr.length;
+            k = k % n;
+
+            if (k === 0) return [...arr]; // Return a shallow copy if no rotation
+
+            if (direction === 'left') {
+                return arr.slice(k).concat(arr.slice(0, k));
+            } else if (direction === 'right') {
+                return arr.slice(n - k).concat(arr.slice(0, n - k));
+            } else {
+                throw new Error("Direction must be 'left' or 'right'.");
+            }
+        }
+        if (steps > 0)
+            this._points = rotateArray(this._points, steps, 'left');
+        else
+            this._points = rotateArray(this._points, -steps, 'right');
+        return this;
+    }
+
+    // add a new point between each existing point
+    increaseResolution(factor = 1) {
+        let newPoints = [];
+        for (let i = 0; i < this._points.length - 1; i++) {
+            let p0 = this._points[i];
+            let p1 = this._points[i + 1];
+            newPoints.push(p0);
+            if (i in this._selected) {
+                for (let j = 1; j <= factor; j++) {
+                    let t = j / (factor + 1);
+                    newPoints.push({ x: p0.x * (1 - t) + p1.x * t, y: p0.y * (1 - t) + p1.y * t });
+                }
+            }
+        }
+        newPoints.push(this._points[this._points.length - 1]);
+        this._points = newPoints;
+        return this;
+    }
+
     // border is the polygon used to clip
     voronoi(border) {
         //var polygons = d3.geom.voronoi(this._points);
 
         var isCornerRadiusAbsolute = true;
-        var cornerRadius = 33;
+        var cornerRadius = 23;
         function resampleSegments(points) {
             if (points.length == 0)
                 return points;
@@ -527,7 +591,10 @@ class organic {
         var newPolygons = [];
         for (let cell of vor) {
             if (cell.length > 2) {
-                let resampled = resampleSegments(cell);
+                // this clipping only uses the convex approximation of the border, do better using polygon-clipping
+                var erg = polygonClipping.intersection([border._points.map(p => [p.x, p.y])], [cell]);
+
+                let resampled = resampleSegments(erg[0][0].filter((p, i) => i < erg[0][0].length - 1));
                 let newPoly = new organic();
                 for (let p of resampled) {
                     newPoly._points.push({ x: p[0], y: p[1] });
