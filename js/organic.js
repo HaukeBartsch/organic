@@ -336,21 +336,47 @@ class organic {
         return path;
     }
 
-    drawDots(elementId) {
+    drawDots(elementId, radius = 5) {
         const svg = document.getElementById(elementId); // Assuming you have an SVG element
         const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
 
         for (let p of this._points) {
+            if (this._selected.length > 0 && !this._selected.includes(this._points.indexOf(p)))
+                continue;
             var circle = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
             circle.setAttributeNS(null, 'cx', p.x);
             circle.setAttributeNS(null, 'cy', p.y);
-            circle.setAttributeNS(null, 'r', '5');
+            circle.setAttributeNS(null, 'r', radius);
             circle.setAttributeNS(null, 'fill', this._color);
             group.appendChild(circle);
         }
         svg.appendChild(group);
         return group;
     }
+
+    drawIds(elementId, fontsize = 5) {
+        const svg = document.getElementById(elementId); // Assuming you have an SVG element
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+        for (let p of this._points) {
+            if (this._selected.length > 0 && !this._selected.includes(this._points.indexOf(p)))
+                continue;
+            var text = document.createElementNS("http://www.w3.org/2000/svg", 'text');
+            text.setAttributeNS(null, 'x', p.x);
+            text.setAttributeNS(null, 'y', p.y);
+            text.setAttributeNS(null, 'dx', fontsize/2);
+            text.setAttributeNS(null, 'dy', -fontsize/2);
+            text.setAttributeNS(null, 'font-size', fontsize);
+            // circle.setAttributeNS(null, 'r', radius);
+            text.setAttributeNS(null, 'fill', this._color);
+            var textNode = document.createTextNode(this._points.indexOf(p));
+            text.appendChild(textNode);
+            group.appendChild(text);
+        }
+        svg.appendChild(group);
+        return group;
+    }
+
 
     grid(cols, rows) {
         // assume the screen is 1000x1000 
@@ -379,6 +405,14 @@ class organic {
     selectLast(n) {
         this._selected = [];
         for (let i = Math.max(0, this._points.length - n); i < this._points.length; i++) {
+            this._selected.push(i);
+        }
+        return this;
+    }
+
+    selectFirst(n) {
+        this._selected = [];
+        for (let i = 0; i < Math.min(n, this._points.length); i++) {
             this._selected.push(i);
         }
         return this;
@@ -451,6 +485,46 @@ class organic {
         let p = path.getPointAtLength(1.0 * curveLength);
         newPoints.push({ x: p.x, y: p.y });
         this._points = newPoints;
+        return this;
+    }
+
+    // we should call this several times until no more change
+    simplify(tolerance = 1.0) {
+        let pointsToSimplify = [];
+        let smallestDistance = Infinity;
+        for (let i of this._selected) {
+            pointsToSimplify.push([this._points[i].x, this._points[i].y]);
+            if (pointsToSimplify.length > 1) {
+                let dx = pointsToSimplify[pointsToSimplify.length - 1][0] - pointsToSimplify[pointsToSimplify.length - 2][0];
+                let dy = pointsToSimplify[pointsToSimplify.length - 1][1] - pointsToSimplify[pointsToSimplify.length - 2][1];
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < smallestDistance)
+                    smallestDistance = dist;
+            }
+        }
+        if (tolerance < smallestDistance)
+            return this;
+
+        let newPoints = [];
+        // todo: remove points that are close to both successor and predecessor
+        newPoints.push(pointsToSimplify[0]);
+        for (let i = 1; i < pointsToSimplify.length-1; i++) {
+            let dx = pointsToSimplify[i][0] - pointsToSimplify[i+1][0];
+            let dy = pointsToSimplify[i][1] - pointsToSimplify[i+1][1];
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let dx2 = pointsToSimplify[i][0] - pointsToSimplify[i-1][0];
+            let dy2 = pointsToSimplify[i][1] - pointsToSimplify[i-1][1];
+            let dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+            if ((dist + dist2) < tolerance) { // skip the current point
+                newPoints.push(pointsToSimplify[i+1]);
+                i++;
+                continue; // skip this point
+            }
+            newPoints.push(pointsToSimplify[i]);
+        }
+        newPoints.push(pointsToSimplify[pointsToSimplify.length - 1]); // always keep the last point
+        this._points = newPoints.map(p => { return { x: p[0], y: p[1] }; });
+        this.selectAll();
         return this;
     }
 
@@ -574,8 +648,8 @@ class organic {
             points = points.reverse();
             return points;
         }
-        var line = d3.line()
-            .curve(d3.curveBasisClosed)
+        //var line = d3.line()
+        //    .curve(d3.curveBasisClosed)
 
         var bounds = d3.geom.polygon(border._points.map(p => [p.x, p.y]));
 
@@ -594,17 +668,21 @@ class organic {
             if (cell.length > 2) {
                 // this clipping only uses the convex approximation of the border, do better using polygon-clipping
                 var erg = polygonClipping.intersection([border._points.map(p => [p.x, p.y])], [cell]);
-                if (erg[0][0][0][0] == erg[0][0][erg[0][0].length-1][0] &&
-                    erg[0][0][0][1] == erg[0][0][erg[0][0].length-1][1])
-                    erg[0][0].pop(); // remove duplicate first point
+                //if (erg[0][0][0][0] == erg[0][0][erg[0][0].length-1][0] &&
+                //    erg[0][0][0][1] == erg[0][0][erg[0][0].length-1][1])
+                //    erg[0][0].pop(); // remove duplicate first point
 
                 // let resampled = resampleSegments(erg[0][0].filter((p, i) => i < erg[0][0].length - 1));
-                let resampled = resampleSegments(erg[0][0]);
+                let resampled = erg[0][0]; // resampleSegments(erg[0][0]);
                 let newPoly = new organic();
                 for (let p of resampled) {
                     newPoly._points.push({ x: p[0], y: p[1] });
                 }
-                //newPoly.rotateIndex(3);
+                // use the same number of points for all polygons
+                //newPoly.spline(15);
+                //newPoly.selectAll().increaseResolution(1);
+                //newPoly._points.pop(); // remove duplicate last point
+                //newPoly.rotateIndex(6).selectAll();
                 newPoly._closed = true;
                 newPoly.setColor(newPolygons.length);
                 newPolygons.push(newPoly);

@@ -30,15 +30,31 @@ function main() {
         .voronoi(corridor);
 
     var line = d3.line()
-            .curve(d3.curveBasisClosed);
+            .curve(/*d3.curveCardinalClosed*/ /*d3.curveCatmullRomClosed*/ d3.curveBasisClosed );
     for (let v of voronois) {
+        let v2 = v.copy().selectAll().increaseResolution(3);//.spline(11);
+        let numPointsBefore = 0;
+        do {
+            numPointsBefore = v2._points.length;
+            v2.selectAll().simplify(10).selectAll();
+        } while (v2._points.length < numPointsBefore);
+        //v2.rotateIndex(2).selectAll();
+        // points 0 and last point are identical, remove duplicate point
+        v2._points.pop();
+
         const svg = document.getElementById('draw'); // Assuming you have an SVG element
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-
-        path.setAttribute("d", line(v._points.map(function(a) { return [a.x, a.y]; })));
+        
+        path.setAttribute("d", line(v2._points.map(function(a) { return [a.x, a.y]; })));
         path.setAttribute('fill', v._color);
+        path.setAttribute('stroke', v._color);
+        path.setAttribute('stroke-width', 2);
         path.setAttribute('fill-opacity', 0.5);
         svg.appendChild(path);
+
+        //v.copy().selectFirst(2).drawDots('draw', 5);
+        //v2.selectAll().drawDots('draw', 3);
+        //v2.selectAll().drawIds('draw', 9);
     }
 }
 main();
