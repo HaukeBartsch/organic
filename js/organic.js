@@ -713,9 +713,6 @@ class organic {
             if (cell.length > 2) {
                 // this clipping only uses the convex approximation of the border, do better using polygon-clipping
                 var erg = polygonClipping.intersection([border._points.map(p => [p.x, p.y])], [cell]);
-                //if (erg[0][0][0][0] == erg[0][0][erg[0][0].length-1][0] &&
-                //    erg[0][0][0][1] == erg[0][0][erg[0][0].length-1][1])
-                //    erg[0][0].pop(); // remove duplicate first point
 
                 // let resampled = resampleSegments(erg[0][0].filter((p, i) => i < erg[0][0].length - 1));
                 let resampled = erg[0][0]; // resampleSegments(erg[0][0]);
@@ -723,18 +720,46 @@ class organic {
                 for (let p of resampled) {
                     newPoly._points.push({ x: p[0], y: p[1] });
                 }
-                // use the same number of points for all polygons
-                //newPoly.spline(15);
-                //newPoly.selectAll().increaseResolution(1);
-                //newPoly._points.pop(); // remove duplicate last point
-                //newPoly.rotateIndex(6).selectAll();
                 newPoly._closed = true;
-                newPoly.setColor(newPolygons.length);
+                //newPoly.setColor(newPolygons.length);
                 newPolygons.push(newPoly);
             }
         }
+
+        // sort the polygons based on the original points in this._points (closest distance to center of mass is fine)
+        let center_of_mass = newPolygons.map(polygon => {
+            let comx = 0;
+            let comy = 0;
+            for (let p of polygon._points) {
+                comx += p.x;
+                comy += p.y;
+            }
+            comx /= polygon._points.length;
+            comy /= polygon._points.length;
+            return { x: comx, y: comy };
+        });
+
+        let newPolygons2 = [];
+        for (let i = 0; i < this._points.length; i++) {
+            let closestIndex = -1;
+            let closestDistance = Infinity;
+            for (let j = 0; j < center_of_mass.length; j++) {
+                let dx = this._points[i].x - center_of_mass[j].x;
+                let dy = this._points[i].y - center_of_mass[j].y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < closestDistance) {
+                    closestDistance = dist;
+                    closestIndex = j;
+                }
+            }
+            if (closestIndex >= 0) {
+                newPolygons2.push(newPolygons[closestIndex]);
+                newPolygons2[newPolygons2.length-1].setColor(newPolygons2.length);
+            }
+        }
+
         // returns an array of organic objects
-        return newPolygons;
+        return newPolygons2;
     }
 
 }
