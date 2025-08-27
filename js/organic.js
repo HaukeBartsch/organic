@@ -488,8 +488,53 @@ class organic {
         return this;
     }
 
-    // we should call this several times until no more change
+    removeDuplicates(tolerance = 1e-4) {
+        let newPoints = [];
+        let lastPoint = null;
+        for (let p of this._points) {
+            if (lastPoint == null) {
+                newPoints.push(p);
+                lastPoint = p;
+                continue;
+            }
+            let dx = p.x - lastPoint.x;
+            let dy = p.y - lastPoint.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > tolerance) {
+                newPoints.push(p);
+                lastPoint = p;
+            }
+        }
+        this._points = newPoints;
+        if (this._closed) {
+            // the first and last point also should be different, remove last point until they are
+            while (this._points.length > 1) {
+                let p0 = this._points[0];
+                let p1 = this._points[this._points.length - 1];
+                let dx = p0.x - p1.x;
+                let dy = p0.y - p1.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > tolerance)
+                    break;
+                this._points.pop();
+            }
+        }
+
+        this.selectAll();
+        return this;
+    }
+
     simplify(tolerance = 1.0) {
+        let numPointsBefore = 0;
+        do {
+            numPointsBefore = this._points.length;
+            this.selectAll()._simplify(tolerance).selectAll();
+        } while (this._points.length < numPointsBefore);
+        return this;
+    }
+
+    // we call this several times until no more change
+    _simplify(tolerance = 1.0) {
         let pointsToSimplify = [];
         let smallestDistance = Infinity;
         for (let i of this._selected) {

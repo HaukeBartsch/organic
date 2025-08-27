@@ -7,7 +7,7 @@ function main() {
         .points(52)
         .grid(52, 1)
         .selectLast(Math.floor(52/3))
-        .bendUp(200)
+        .bendUp(-200)
         //.selectLast(60)
         //.bendUp(-300);
     // a closed path
@@ -15,8 +15,8 @@ function main() {
         .selectAll()
         .corridor(25);
 
-    centerline.draw('draw');
-    corridor.draw('draw');
+    //centerline.draw('draw');
+    //corridor.draw('draw');
 
     // distribute 10 points equidistantly along the centerline
     let centers = centerline.copy().selectAll()
@@ -24,7 +24,7 @@ function main() {
         .remove(function (p, i) {
             return i % 2 == 0;
         });
-    centers.drawDots('draw');
+    //centers.drawDots('draw');
 
     let voronois = centers.copy().selectAll()
         .voronoi(corridor);
@@ -33,14 +33,12 @@ function main() {
             .curve(/*d3.curveCardinalClosed*/ /*d3.curveCatmullRomClosed*/ d3.curveBasisClosed );
     for (let v of voronois) {
         let v2 = v.copy().selectAll().increaseResolution(3);//.spline(11);
-        let numPointsBefore = 0;
-        do {
-            numPointsBefore = v2._points.length;
-            v2.selectAll().simplify(10).selectAll();
-        } while (v2._points.length < numPointsBefore);
+        v2.selectAll().simplify(15).selectAll();
         //v2.rotateIndex(2).selectAll();
         // points 0 and last point are identical, remove duplicate point
-        v2._points.pop();
+        //v2._points.pop();
+        v2.removeDuplicates();
+        //v2.selectAll();
 
         const svg = document.getElementById('draw'); // Assuming you have an SVG element
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
