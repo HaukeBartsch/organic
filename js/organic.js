@@ -448,6 +448,36 @@ class organic {
         return this;
     }
 
+    alignLeft() {
+        if (this._selected.length == 0) {
+            this.selectAll();
+        }
+        let minX = Math.min(...this._points.map(p => p.x));
+        for (let i of this._selected) {
+            this._points[i].x -= minX;
+        }
+        return this;
+    }
+
+    alignTop() {
+        if (this._selected.length == 0) {
+            this.selectAll();
+        }
+        let minY = Math.min(...this._points.map(p => p.y));
+        for (let i of this._selected) {
+            this._points[i].y -= minY;
+        }
+        return this;
+    }
+
+    translate(dx = 0, dy = 0) {
+        for (let i of this._selected) {
+            this._points[i].x += dx;
+            this._points[i].y += dy;
+        }
+        return this;
+    }
+
     bendUp(amount = 1) {
         let counter = 0;
         let scale = -amount;
