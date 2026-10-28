@@ -294,7 +294,15 @@ class organic {
         return this;
     }
 
+    // can be array of arrays (x,y) or number of points
     points(numPoints) {
+        if (Array.isArray(numPoints)) {
+	   for (let i = 0; i < numPoints.length; i++) {
+	      this._points.push({ x: numPoints[i][0], y: numPoints[i][1] });
+	   }
+	   return this;
+	}
+	// if numPoints is a number
         for (let i = 0; i < numPoints; i++) {
             this._points.push({ x: 0, y: 0 });
         }
@@ -414,6 +422,28 @@ class organic {
         this._selected = [];
         for (let i = 0; i < Math.min(n, this._points.length); i++) {
             this._selected.push(i);
+        }
+        return this;
+    }
+
+    selectNth(n) {
+        this._selected = [];
+        this._selected.push(n);
+        return this;
+    }
+
+    // scale is around the first selected point
+    // use: grid.selectNth(4).scale(0.5) to scale the grid around the center point
+    scale(amount = 1.0) {
+        if (this._selected.length == 0) {
+            this._selected = [];
+            this._selected.push(0);
+        }
+        let center = { x: this._points[this._selected[0]].x, y: this._points[this._selected[0]].y };
+        for (let i = 0; i < this._points.length; i++) {
+           var p = this._points[i];
+           this._points[i].x = center.x + amount * ((center.x - p.x));
+           this._points[i].y = center.y + amount * ((center.y - p.y));
         }
         return this;
     }
